@@ -14,13 +14,14 @@ import java.util.Set;
 @AllArgsConstructor
 public class Book {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "book_seq")
+    @SequenceGenerator(name = "book_seq", sequenceName = "book_seq", allocationSize = 1000)
     @Column(name = "book_id")
     private Long id;
 
     @ManyToOne
     @JoinColumn(name = "isbn", nullable = false)
-    private BookCopy bookCopy;
+    private BookMetaData bookMetaData;
 
     // Relationships
     @OneToMany(mappedBy = "book")

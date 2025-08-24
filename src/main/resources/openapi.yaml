@@ -1,0 +1,534 @@
+openapi: 3.0.3
+info:
+  version: '1.0.0'
+  title: TitleWhisperer API
+  description: API for generating suggested titles from slide content using ChatGPT.
+security:
+  - ApiKeyAuth: [ ]
+paths:
+  /books:
+    get:
+      summary: Get a list of all books in the library
+      operationId: listBooks
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 0
+          description: Zero-based page index
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 20
+          description: Page size
+      responses:
+        "200":
+          description: A list of books
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookListResponse"
+              examples:
+                sample:
+                  summary: Example list
+                  value:
+                    items:
+                      - id: 1
+                        title: "Clean Code"
+                        author: "Robert C. Martin"
+                        isbn: "9780132350884"
+                        totalCopies: 5
+                      - id: 2
+                        title: "Effective Java"
+                        author: "Joshua Bloch"
+                        isbn: "9780134685991"
+                        totalCopies: 2
+                    page:
+                      index: 0
+                      size: 20
+                      totalElements: 2
+                      totalPages: 1
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBadRequest"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+    post:
+      summary: Register a new book to the library
+      operationId: registerBook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookRequest"
+            examples:
+              sample:
+                summary: Example create request
+                value:
+                  title: "Domain-Driven Design"
+                  author: "Eric Evans"
+                  isbn: "9780321125217"
+      responses:
+        "201":
+          description: Book created successfully
+          headers:
+            Location:
+              description: URI of the created resource
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+              examples:
+                sample:
+                  value:
+                    id: 101
+                    title: "Domain-Driven Design"
+                    author: "Eric Evans"
+                    isbn: "9780321125217"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+              examples:
+                missingField:
+                  value:
+                    errorCode: 400
+                    message: "Bad Request"
+                    details:
+                      - "title must not be blank"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+  /members:
+    post:
+      summary: Register a new member
+      operationId: registerMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMemberRequest"
+            examples:
+              sample:
+                summary: Example member registration
+                value:
+                  name: "Jane Doe"
+                  email: "jane.doe@example.com"
+      responses:
+        "201":
+          description: Member created successfully
+          headers:
+            Location:
+              description: URI of the created resource
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+              examples:
+                sample:
+                  value:
+                    name: "Jane Doe"
+                    email: "jane.doe@example.com"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+              examples:
+                missingField:
+                  value:
+                    errorCode: 400
+                    message: "Bad Request"
+                    details:
+                      - "name must not be blank"
+                      - "email must be a valid email address"
+        "409":
+          description: Conflict (duplicate card number or email)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+              examples:
+                duplicate:
+                  value:
+                    errorCode: 409
+                    message: "Conflict"
+                    details:
+                      - "Member with this cardNumber or email already exists"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+  /loans:
+    post:
+      summary: Loan a book to a member
+      operationId: loanBook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanBookRequest"
+            examples:
+              sample:
+                summary: Example loan request
+                value:
+                  cardNumber: "LIB-2025-4F7A1B9C"
+      responses:
+        "201":
+          description: Book loan created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanReceipt"
+              examples:
+                sample:
+                  value:
+                    cardNumber: "LIB-2025-4F7A1B9C"
+                    isbn: "9780321125217"
+                    bookedAt: "2025-08-24T10:15:30Z"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+              examples:
+                missingField:
+                  value:
+                    errorCode: 400
+                    message: "Bad Request"
+                    details:
+                      - "cardNumber must not be blank"
+        "404":
+          description: Book or member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+              examples:
+                notFound:
+                  value:
+                    errorCode: 404
+                    message: "Not Found"
+                    details:
+                      - "Book with given ISBN not found"
+                      - "Member with given cardNumber not found"
+        "409":
+          description: Conflict (no available copies or already loaned constraints)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+              examples:
+                conflict:
+                  value:
+                    errorCode: 409
+                    message: "Conflict"
+                    details:
+                      - "No available copies"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+  /return:
+    patch:
+      summary: Return a book
+      operationId: returnBook
+      description: Returns a borrowed book. The request must include the member card number and the book ISBN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnBookRequest"
+            examples:
+              sample:
+                summary: Example return request
+                value:
+                  cardNumber: "LIB-2025-4F7A1B9C"
+                  isbn: "9780321125217"
+      responses:
+        "200":
+          description: Book successfully returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnReceipt"
+              examples:
+                sample:
+                  value:
+                    cardNumber: "LIB-2025-4F7A1B9C"
+                    isbn: "9780321125217"
+                    returnedAt: "2025-08-24T10:45:00Z"
+        "400":
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+              examples:
+                invalidFormat:
+                  value:
+                    errorCode: 400
+                    message: "Bad Request"
+                    details:
+                      - "cardNumber must match format LIB-YYYY-XXXXXXXX (e.g., LIB-2025-4F7A1B9C)"
+                      - "isbn must not be blank"
+        "404":
+          description: Active loan not found for given cardNumber and isbn
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+              examples:
+                notFound:
+                  value:
+                    errorCode: 404
+                    message: "Not Found"
+                    details:
+                      - "No active loan found for the provided cardNumber and isbn"
+        "409":
+          description: Conflict (already returned)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+              examples:
+                conflict:
+                  value:
+                    errorCode: 409
+                    message: "Conflict"
+                    details:
+                      - "Loan already returned"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommonError"
+components:
+  schemas:
+    CreateBookRequest:
+      type: object
+      required:
+        - title
+        - author
+        - isbn
+        - totalCopies
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        author:
+          type: string
+          minLength: 1
+          maxLength: 255
+        isbn:
+          type: string
+          description: 10 or 13-digit ISBN (dashes allowed)
+          minLength: 10
+          maxLength: 17
+        totalCopies:
+          type: integer
+          minimum: 1
+          default: 1
+      additionalProperties: false
+    Book:
+      type: object
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        isbn:
+          type: string
+        totalCopies:
+          type: integer
+      required:
+        - id
+        - title
+        - author
+        - isbn
+        - totalCopies
+    BookListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Book"
+        page:
+          type: object
+          properties:
+            index:
+              type: integer
+              minimum: 0
+            size:
+              type: integer
+              minimum: 1
+            totalElements:
+              type: integer
+              minimum: 0
+            totalPages:
+              type: integer
+              minimum: 0
+          required:
+            - index
+            - size
+            - totalElements
+            - totalPages
+      required:
+        - items
+        - page
+    CreateMemberRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 320
+      additionalProperties: false
+    Member:
+      type: object
+      properties:
+        cardNumber:
+          type: string
+      required:
+        - cardNumber
+    LoanBookRequest:
+      type: object
+      required:
+        - cardNumber
+        - isbn
+      properties:
+        isbn:
+          type: string
+          description: ISBN of the book to loan
+        cardNumber:
+          type: string
+          minLength: 13
+          maxLength: 17
+          description: >
+            Member's unique library card number.
+            Format: LIB-<YEAR>-<RANDOM_STRING>
+            Example: LIB-2025-4F7A1B9C
+          pattern: "^LIB-\\d{4}-[A-Z0-9]{8}$"
+      additionalProperties: false
+    LoanReceipt:
+      type: object
+      properties:
+        cardNumber:
+          type: string
+        isbn:
+          type: string
+        bookedAt:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp when the booking was created
+      required:
+        - cardNumber
+        - isbn
+        - bookedAt
+    ReturnBookRequest:
+      type: object
+      required:
+        - cardNumber
+        - isbn
+      properties:
+        cardNumber:
+          type: string
+          minLength: 13
+          maxLength: 17
+          description: >
+            Member's unique library card number.
+            Format: LIB-<YEAR>-<RANDOM_STRING>
+            Example: LIB-2025-4F7A1B9C
+          pattern: "^LIB-\\d{4}-[A-Z0-9]{8}$"
+        isbn:
+          type: string
+          minLength: 10
+          maxLength: 17
+          description: 10 or 13-digit ISBN (dashes allowed)
+      additionalProperties: false
+    ReturnReceipt:
+      type: object
+      properties:
+        cardNumber:
+          type: string
+        isbn:
+          type: string
+        returnedAt:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp when the return was recorded
+      required:
+        - cardNumber
+        - isbn
+        - returnedAt
+    ErrorBadRequest:
+      $ref: '#/components/schemas/CommonError'
+      example:
+        errorCode: 400
+        message: "Bad Request"
+        details: [ "Invalid content provided." ]
+    ErrorUnauthorized:
+      $ref: '#/components/schemas/CommonError'
+      example:
+        errorCode: 401
+        message: "Unauthorized"
+        details: [ "Invalid or expired API key. Please provide a valid API key." ]
+    ErrorInternalServerError:
+      $ref: '#/components/schemas/CommonError'
+      example:
+        errorCode: 500
+        message: "Internal Server Error"
+        details: [ "An unexpected error occurred while processing your request." ]
+    CommonError:
+      type: object
+      properties:
+        errorCode:
+          type: integer
+          format: int32
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string

@@ -2,7 +2,7 @@ package mapper;
 
 import com.collabera.library_app.dto.BookDto;
 import com.collabera.library_app.model.Book;
-import com.collabera.library_app.model.BookCopy;
+import com.collabera.library_app.model.BookMetaData;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -14,8 +14,7 @@ public class BookMapper {
         }
 
         return Book.builder()
-                .id(dto.bookId())
-                .bookCopy(BookCopy.builder().isbn(dto.isbn())
+                .bookMetaData(BookMetaData.builder().isbn(dto.isbn())
                         .title(dto.title()).author(dto.author()).build()).build();
     }
 }

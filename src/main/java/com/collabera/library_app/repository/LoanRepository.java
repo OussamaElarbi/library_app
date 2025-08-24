@@ -1,22 +1,22 @@
 package com.collabera.library_app.repository;
 
+import com.collabera.library_app.model.Book;
 import com.collabera.library_app.model.Loan;
+import com.collabera.library_app.model.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface LoanRepository extends JpaRepository<Loan, Long> {
+    boolean existsByMemberAndBook_BookMetaDataIsbnAndReturnedAtIsNull(Member member, String isbn);
 
-    List<Loan> findByMemberId(Long memberId);
+    boolean existsByBookAndReturnedAtIsNull(Book book);
 
-    List<Loan> findByBookId(Long bookId);
+    // Fetch the single active loan for a member and ISBN
+    Optional<Loan> findByMemberAndBook_BookMetaDataIsbnAndReturnedAtIsNull(Member member, String isbn);
 
-    List<Loan> findByMemberIdAndReturnedAtIsNull(Long memberId);
+    // Useful if you want to detect ambiguity and fail when >1 is present
+    List<Loan> findAllByMemberAndBook_BookMetaDataIsbnAndReturnedAtIsNull(Member member, String isbn);
 
-    Optional<Loan> findByBookIdAndReturnedAtIsNull(Long bookId);
-
-    boolean existsByMemberIdAndBookIdAndReturnedAtIsNull(Long memberId, Long bookId);
-
-    long countByMemberIdAndReturnedAtIsNull(Long memberId);
 }

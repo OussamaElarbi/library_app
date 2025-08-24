@@ -6,13 +6,13 @@ import lombok.*;
 import java.util.Set;
 
 @Entity
-@Table(name = "book_copies")
+@Table(name = "book_metadata")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BookCopy {
+public class BookMetaData {
     @Id
     @Column(name = "isbn", length = 20)
     private String isbn;
@@ -23,7 +23,7 @@ public class BookCopy {
     private String author;
 
     // One ISBN can be referenced by multiple books
-    @OneToMany(mappedBy = "bookCopy")
+    @OneToMany(mappedBy = "bookMetaData")
     private Set<Book> books;
 
 }

@@ -6,9 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
+    Optional<Member> findByEmail(String email);
 
-    Optional<Member> findByCardNumber(String cardNumber);
+    boolean existsByCardNumber(String membershipNumber);
 
-    boolean existsByCardNumber(String cardNumber);
+    Optional<Member> getByCardNumber(String cardNumber);
 }
 
