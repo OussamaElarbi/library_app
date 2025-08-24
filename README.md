@@ -1,136 +1,153 @@
-Library Management System API - Collabera
+# Library Management System API
 
-This project implements a Library Management System (LMS) using Java 17 and Spring Boot. It provides REST APIs to manage books, members, loans, and returns.
+A Library Management System (LMS) built with Java 17 and Spring Boot. It provides REST APIs to manage books, members, loans, and returns, with robust validation and data integrity.
 
-✅ Features
-	•	Register and list books.
-	•	Register members.
-	•	Loan a book to a member.
-	•	Return a borrowed book.
-	•	Enforce business rules:
-	•	Only one active loan per unique ISBN per member.
-	•	No two members can share the same email.
-	•	Store metadata separately for books to avoid redundancy.
-	•	Strong data validation and proper error handling.
-	•	Configurable for multiple environments.
+## Features
 
-🛠 Technology Stack
-	•	Language: Java 17
-	•	Framework: Spring Boot
-	•	Database: PostgreSQL
-	•	Chosen for ACID compliance, strong consistency, scalability, and native support in Spring Boot.
-	•	Dependency Management: Maven
-	•	Containerization: Docker & Docker Compose
+- Register and list books.
+- Register members.
+- Loan a book to a member.
+- Return a borrowed book.
+- Business rules:
+    - Only one active loan per unique ISBN per member.
+    - Only one member may hold a specific book copy (book_id) at a time.
+    - No two members can share the same email.
+    - Book metadata (ISBN/title/author) stored separately to avoid redundancy.
+- Strong validation and error handling.
+- Configurable for multiple environments (profiles/env vars).
+- OpenAPI 3 specification included.
 
-📦 Getting Started
+## Technology Stack
 
-Prerequisites
-	•	Java 17
-	•	Maven
-	•	Docker & Docker Compose
-	•	PostgreSQL database
+- Language: Java 17
+- Framework: Spring Boot
+- Database: PostgreSQL
+- Dependency Management: Maven
+- Containerization: Docker & Docker Compose
+- API Spec: OpenAPI 3 (openapi.yaml)
 
-Steps to Run
-	1.	Build the project and generate OpenAPI files:
+## Why PostgreSQL
 
+- Strong ACID compliance to ensure loan/return consistency.
+- Excellent Spring Boot integration.
+- Advanced indexing for read-heavy operations.
+- Scales with partitioning and sharding strategies as the library grows.
+
+## Getting Started
+
+### Prerequisites
+
+- Java 17
+- Maven 3.9+
+- Docker & Docker Compose
+
+### Build and Run
+
+1) Build the project and generate OpenAPI sources:
+```shell script
 mvn clean package -DskipTests
+```
 
-	2.	Start the application with Docker:
 
+2) Start the application stack:
+```shell script
 docker-compose up --build
+```
 
-	3.	Stop and restart:
 
-# Stop the app
-ctrl + c
+### Stop and Restart
 
-# Restart with fresh containers
+- Stop:
+```shell script
+# in the running terminal
+Ctrl + C
+```
+
+
+- Restart with fresh containers:
+```shell script
 docker-compose down
 docker-compose up --build
+```
 
-📚 API Endpoints
 
-Action	Method	Endpoint
-List books	GET	/books
-Register book	POST	/books
-Register member	POST	/members
-Loan book	POST	/loans
-Return book	PATCH	/return
+## Configuration (Multiple Environments)
 
-	Note: A Postman collection is available to test all endpoints. Download it from the docs/ folder in this repository.
+- Use Spring profiles and environment variables.
+- Common variables:
+    - SPRING_PROFILES_ACTIVE=dev|prod
+    - SPRING_DATASOURCE_URL
+    - SPRING_DATASOURCE_USERNAME
+    - SPRING_DATASOURCE_PASSWORD
+- You can store these in a `.env` file for Docker Compose and per-environment `application-<profile>.properties`.
 
-💾 Database Schema
+## API Endpoints
 
-Book Metadata Table (book_metadata)
-	•	Stores unique ISBNs, title, and author to avoid redundancy.
+| Action          | Method | Endpoint |
+|-----------------|--------|----------|
+| List books      | GET    | /books   |
+| Register book   | POST   | /books   |
+| Register member | POST   | /members |
+| Loan book       | POST   | /loans   |
+| Return book     | PATCH  | /return  |
 
-CREATE TABLE public.book_metadata (
-  isbn varchar(20) NOT NULL PRIMARY KEY,
-  author varchar(255),
-  title varchar(255) NOT NULL
-);
+- Request/response bodies use JSON.
+- Errors return a consistent shape: `{ "errorCode": number, "message": string, "details": [ string ] }`.
 
-Books Table (books)
-	•	Each physical copy has a unique book_id but references the metadata via ISBN.
+## Postman Collection
 
-CREATE TABLE public.books (
-  book_id int8 NOT NULL PRIMARY KEY,
-  isbn varchar(20) NOT NULL REFERENCES public.book_metadata(isbn)
-);
+- A Postman collection is provided to test all endpoints.
+- Download it from the `docs/` or `postman/` folder of this repository (e.g., `postman/Library-API.postman_collection.json`).
+- In Postman:
+    - File → Import → choose the collection JSON.
+    - Set a Postman environment variable `baseUrl` (e.g., `http://localhost:8080`), then run the requests.
 
-Members Table (members)
-	•	Each member has a unique card number and email.
+## Validation and Error Handling
 
-CREATE TABLE public.members (
-  member_id int8 GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-  card_number varchar(255) NOT NULL UNIQUE,
-  email varchar(255) NOT NULL UNIQUE,
-  name varchar(255) NOT NULL
-);
+- Member card number must match: `LIB-<YEAR>-<RANDOM_STRING>` (e.g., `LIB-2025-4F7A1B9C`).
+- Book registration requires `title`, `author`, `isbn`, and `totalCopies >= 1`.
+- Typical responses:
+    - 400 Bad Request: validation errors and invalid payloads.
+    - 404 Not Found: referenced entities that do not exist.
+    - 409 Conflict: business rule violations (e.g., book already loaned).
+    - 500 Internal Server Error: unexpected database or server errors.
 
-Loans Table (loans)
-	•	Tracks book loans and enforces unique active loans per book.
+## Business Rules Mapping
 
-CREATE TABLE public.loans (
-  id int8 GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-  booked_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  returned_at timestamp NULL,
-  book_id int8 NOT NULL REFERENCES public.books(book_id),
-  member_id int8 NOT NULL REFERENCES public.members(member_id)
-);
+- Multiple copies per ISBN: each copy is a separate row with a unique `book_id`.
+- Only one active loan per copy: enforced with a partial unique index on `loans(book_id)` where `returned_at IS NULL`.
+- Only one active loan per member per ISBN: enforced in application logic at loan time.
 
--- Ensure a book can only be borrowed by one member at a time
-CREATE UNIQUE INDEX uq_active_loan_per_book 
-ON public.loans (book_id) 
-WHERE returned_at IS NULL;
+## Schema Summary
 
-⚙️ Assumptions
-	•	A member can borrow multiple books with different ISBNs but cannot borrow multiple copies of the same ISBN.
-	•	ISBN uniquely identifies a book title and author.
-	•	Members have unique card numbers and emails.
-	•	Metadata table prevents redundancy for title and author information.
+- `book_metadata`: `isbn` (PK), `title`, `author`.
+    - Stores shared details per ISBN to avoid duplication.
+- `books`: `book_id` (PK), `isbn` (FK to `book_metadata.isbn`).
+    - Represents physical copies; many copies can reference the same ISBN.
+- `members`: `member_id` (PK, identity), `card_number` (unique), `email` (unique), `name`.
+    - Index on `card_number` for fast lookup.
+- `loans`: `id` (PK, identity), `booked_at` (default `CURRENT_TIMESTAMP`), `returned_at` (nullable), `book_id` (FK), `member_id` (FK).
+    - Indexes: `book_id`, `member_id`, `(member_id, returned_at)`, `returned_at`.
+    - Partial unique index: `UNIQUE (book_id) WHERE returned_at IS NULL`.
 
-📌 Justification of Database Choice
-	•	The library system has a well-structured schema with relationships.
-	•	Consistency is crucial (e.g., avoid loaning a book already returned incorrectly).
-	•	PostgreSQL provides:
-	•	Strong ACID compliance
-	•	Advanced indexing for read-heavy operations
-	•	Seamless integration with Spring Boot
-	•	Scalability options like partitioning and sharding
+## Assumptions
 
-🧩 How to Use the APIs
-	•	List Books: GET /books
-	•	Register Book: POST /books
-	•	Register Member: POST /members
-	•	Loan Book: POST /loans
-	•	Return Book: PATCH /return
-	•	All requests and responses follow JSON format.
-	•	Validation errors return 400 Bad Request.
-	•	Conflicts (e.g., already loaned book) return 409 Conflict.
-	•	Resource not found returns 404 Not Found.
+- A member can borrow multiple books with different ISBNs, but cannot borrow multiple copies of the same ISBN at the same time.
+- Two members cannot share the same email.
+- `ISBN` uniquely maps to `title + author` and is stored in a dedicated metadata table.
+- A member has a human-friendly unique card number like `LIB-2025-4F7A1B9C`.
 
-📌 Notes
-	•	During development, spring.jpa.hibernate.ddl-auto=create-drop is used to auto-create and drop tables. All data will be lost on restart.
-	•	Sequences for auto-generated IDs are configured to avoid conflicts during batch inserts.
-	•	The system is time-zone aware, using MYT (UTC+8) for timestamps.
+## Troubleshooting
+
+- If you see errors about duplicate keys in `loans`:
+    - Ensure `id` is defined as an identity/auto-increment in the database.
+    - Align the identity sequence with the current max ID if needed.
+- If `book_id` is null on insert:
+    - Ensure `books.book_id` is an identity/auto-increment column and the entity uses `@GeneratedValue`.
+- Check container logs:
+```shell script
+docker-compose logs -f
+```
+
+## License
+Include your preferred license (e.g., MIT, Apache 2.0) in a `LICENSE` file.
