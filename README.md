@@ -70,17 +70,6 @@ docker-compose down
 docker-compose up --build
 ```
 
-
-## Configuration (Multiple Environments)
-
-- Use Spring profiles and environment variables.
-- Common variables:
-    - SPRING_PROFILES_ACTIVE=dev|prod
-    - SPRING_DATASOURCE_URL
-    - SPRING_DATASOURCE_USERNAME
-    - SPRING_DATASOURCE_PASSWORD
-- You can store these in a `.env` file for Docker Compose and per-environment `application-<profile>.properties`.
-
 ## API Endpoints
 
 | Action          | Method | Endpoint |
@@ -97,7 +86,7 @@ docker-compose up --build
 ## Postman Collection
 
 - A Postman collection is provided to test all endpoints.
-- Download it from the `docs/` or `postman/` folder of this repository (e.g., `postman/Library-API.postman_collection.json`).
+- Download it from the `docs/` folder of this repository (e.g., `docs/Collabera Library API.postman_collection.json`).
 - In Postman:
     - File → Import → choose the collection JSON.
     - Set a Postman environment variable `baseUrl` (e.g., `http://localhost:8080`), then run the requests.
