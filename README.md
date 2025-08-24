@@ -1,6 +1,4 @@
-Here’s a complete GitHub README for your library management system project, incorporating all your requirements, setup instructions, and schema summary:
-
-Library Management System API
+Library Management System API - Collabera
 
 This project implements a Library Management System (LMS) using Java 17 and Spring Boot. It provides REST APIs to manage books, members, loans, and returns.
 
@@ -136,5 +134,3 @@ WHERE returned_at IS NULL;
 	•	During development, spring.jpa.hibernate.ddl-auto=create-drop is used to auto-create and drop tables. All data will be lost on restart.
 	•	Sequences for auto-generated IDs are configured to avoid conflicts during batch inserts.
 	•	The system is time-zone aware, using MYT (UTC+8) for timestamps.
-
-Do you want me to also add a diagram showing relationships between books, book_metadata, members, and loans for the README? It helps non-technical users visualize the schema.
